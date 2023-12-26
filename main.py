@@ -75,7 +75,7 @@ class Flipper:
         self.right_deg = 0
         self.right_bar_WO = WorldObject("8")
         # otherwise the verts copy the size of the bar, from 0 to -0.4
-        self.right_bar_WO.verts = [(0,-1,0),(-0.4,-1,0),(-0.4,1,0),(0,1,0)]
+        self.right_bar_WO.verts = [(-0.4,-1,0),(0,-1,0),(0,1,0),(-0.4,1,0)]
         self.right_bar_WO.pos = pos
                 
         self.make_environment()
@@ -106,10 +106,15 @@ class Flipper:
         frame_size = (-0.9, 0.9, -0.05, 0.0)
         F = DirectFrame(pos=pos, frameSize=frame_size)
         top_wo = WorldObject("4")
-        top_wo.verts = [(-1,1,0),
+        top_wo.verts = [
                         (-1,-1,0),
+                        (-1,1,0),
+                        
+                        
+                        (1,1,0),
                         (1,-1,0),
-                        (1,1,0)]
+                        
+                        ]
         top_wo.pos = pos
         
         #left
@@ -128,10 +133,12 @@ class Flipper:
         frame_size = (-0.05, 0.0, -0.8, 0.9)
         F = DirectFrame(pos=pos, frameSize=frame_size)
         right_wo = WorldObject("6")
-        right_wo.verts = [(0,-1,-1),
-                        (0,1,-1),
+        right_wo.verts = [
+                        (0,-1,1),
                         (0,1,1),
-                        (0,-1,1)]
+                        (0,1,-1),
+                        (0,-1,-1),
+                        ]
         right_wo.pos = pos
         
         #bumper1
@@ -205,6 +212,16 @@ class Flipper:
                 
                 col_v = collisions["1"][x]["collision normal"]
                 col_v = vector.Vector(*col_v)
+                
+                v_v = vector.Vector(*self.current_ball.speed_vector)
+                v_v = v_v.normalize()
+                print(col_v,v_v)
+                ang2 = v_v.angle_to_other(col_v)
+                print("ang",ang2)
+                if ang2 < math.pi/2:
+                    print("not calculating")
+                    continue
+                
                 # that's not how reflections work.
                 # reflections work by mirroring the movementvector
                 # along the normal of the thing.
@@ -214,11 +231,11 @@ class Flipper:
                 # of the reflection... uh.
                 bar_speed_increase = 0
                 #add the appropriate angular velocity of the bar
-                if x == "7":
+                if x == "7" and "left bar" in inputs:
                     d = self.current_ball.position - self.right_bar_WO.pos
                     bar_speed_increase = d.magnitude()/0.4 * math.sin(bar_speed/360)
                     
-                if x == "8":
+                if x == "8" and "right bar" in inputs:
                     d = self.current_ball.position - self.right_bar_WO.pos
                     
                     bar_speed_increase = d.magnitude()/0.4 * math.sin(bar_speed/360)
@@ -231,6 +248,11 @@ class Flipper:
                 print("frac",frac)
                 
                 self.current_ball.speed_vector = reflected_movement+col_v*bar_speed_increase
+                
+                # it is... very unlikely that I will bounce with the exact
+                # same thing? hmmm.. but possible.
+                # but not without changing vectors?
+                # hmmmm
                 
                 # add it to past bounces, so I don't bounce back and
                 # forth in the same spot.
