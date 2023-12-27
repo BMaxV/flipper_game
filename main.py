@@ -35,6 +35,12 @@ class Ball:
 
 class Flipper:
     def __init__(self):
+        
+        #this is for administration of my objects.
+        self.object_id_counter = 1
+        self.world_objects = {}
+        self.frame_objects = {}
+        
         self.score = 0
         self.balls_remaining = 3
         self.current_ball = None
@@ -51,6 +57,20 @@ class Flipper:
         
         # DirectFrame is just a 2d square or rectangle that SHOWS
         # the state. 
+        self.make_left_bar()
+        self.make_right_bar()
+    
+        self.make_environment()
+        
+        # this is colliding with something, but it's fetching
+        # the wrong id?
+        self.bar_ids=[self.left_bar_WO.id,self.right_bar_WO.id]
+        self.env_phys_init_dict["create complex"].update({
+                            self.left_bar_WO.id:[self.left_bar_WO,"wall"],
+                            self.right_bar_WO.id:[self.right_bar_WO,"wall"],
+                            })
+    def make_left_bar(self):
+        this_id=self.generate_object_id()
         
         # WorldObjects hold the 3d information for the walls and flippers.
         self.gravity = vector.Vector(0, 0, -0.0001)
@@ -59,35 +79,34 @@ class Flipper:
         frame_size = (0, 0.4, -0.05, 0.0)
         self.left_bar = DirectFrame(pos=pos, frameSize=frame_size)
         self.left_deg = 0
-        self.left_bar_WO = WorldObject("7")
+        self.left_bar_WO = WorldObject(this_id)
+        
+        self.world_objects[this_id]=self.left_bar_WO
+        self.frame_objects[this_id]=self.left_bar
         
         # ... because of more panda shenanigans, this -1 and 1
         # are the z position for the walls THAT YOU CANT SEE
         # because we're looking top down.
         self.left_bar_WO.verts = [(0,-1,0),(0.4,-1,0),(0.4,1,0),(0,1,0)]
         self.left_bar_WO.pos = pos
-
-        pos = (0.5, 0, -0.5)
         
+    def make_right_bar(self):
+        pos = (0.5, 0, -0.5)
+        this_id=self.generate_object_id()
         # 0.05 is the thickness of the bar
         frame_size = (0, -0.4, -0.05, 0.0) 
         self.right_bar = DirectFrame(pos=pos, frameSize=frame_size)
         self.right_deg = 0
-        self.right_bar_WO = WorldObject("8")
+        self.right_bar_WO = WorldObject(this_id)
         # otherwise the verts copy the size of the bar, from 0 to -0.4
         self.right_bar_WO.verts = [(-0.4,-1,0),(0,-1,0),(0,1,0),(-0.4,1,0)]
         self.right_bar_WO.pos = pos
-                
-        self.make_environment()
+        self.world_objects[this_id]=self.right_bar_WO
+        self.frame_objects[this_id]=self.right_bar
         
-        # this is colliding with something, but it's fetching
-        # the wrong id?
-        
-        self.env_phys_init_dict["create complex"].update({
-                            "7":[self.left_bar_WO,"wall"],
-                            "8":[self.right_bar_WO,"wall"],
-                            })
-        
+    def generate_object_id(self):
+        self.object_id_counter += 1
+        return str(self.object_id_counter)
     
     def make_new_ball(self):
         pos = (-0.2, 0, -0.1)
@@ -102,26 +121,23 @@ class Flipper:
     def make_environment(self):
         
         #top
+        this_id=self.generate_object_id()
         pos = (0, 0, 0.95)
         frame_size = (-0.9, 0.9, -0.05, 0.0)
         F = DirectFrame(pos=pos, frameSize=frame_size)
-        top_wo = WorldObject("4")
-        top_wo.verts = [
-                        (-1,-1,0),
+        top_wo = WorldObject(this_id)
+        top_wo.verts = [(-1,-1,0),
                         (-1,1,0),
-                        
-                        
                         (1,1,0),
-                        (1,-1,0),
-                        
-                        ]
+                        (1,-1,0)]
         top_wo.pos = pos
         
         #left
+        this_id=self.generate_object_id()
         pos = (-0.9, 0, 0)
         frame_size = (-0.0, 0.05, -0.8, 0.9)
         F = DirectFrame(pos=pos, frameSize=frame_size)
-        left_wo = WorldObject("5")
+        left_wo = WorldObject(this_id)
         left_wo.verts = [(0,-1,-1),
                         (0,1,-1),
                         (0,1,1),
@@ -129,41 +145,81 @@ class Flipper:
         left_wo.pos = pos
         
         #right
+        this_id=self.generate_object_id()
         pos = (0.9, 0, 0)
         frame_size = (-0.05, 0.0, -0.8, 0.9)
         F = DirectFrame(pos=pos, frameSize=frame_size)
-        right_wo = WorldObject("6")
-        right_wo.verts = [
-                        (0,-1,1),
+        right_wo = WorldObject(this_id)
+        right_wo.verts = [(0,-1,1),
                         (0,1,1),
                         (0,1,-1),
-                        (0,-1,-1),
-                        ]
+                        (0,-1,-1),]
         right_wo.pos = pos
         
+        #guard_right
+        this_id = self.generate_object_id()
+        pos = (0.9, 0, -0.25)
+        frame_size = (-0.45, 0.0, -0.05, 0.00)
+        guard_right = DirectFrame(pos=pos, frameSize=frame_size)
+        guard_right_WO = WorldObject(this_id)
+        guard_right_WO.verts = [
+                        (-0.45,-1,0),
+                        (0,-1,0),
+                        (0,1,0),
+                        (-0.45,1,0),                        
+                        ]
+        guard_right.setHpr(0,0,-30)
+        guard_right_WO.pos = pos
+        self.frame_objects[this_id] = guard_right
+        self.world_objects[this_id] = guard_right_WO
+        
+        #guard_left
+        this_id = self.generate_object_id()
+        pos = (-0.9, 0, -0.25)
+        frame_size = (0.0, 0.45, -0.05, 0.00)
+        guard_left = DirectFrame(pos=pos, frameSize=frame_size)
+        guard_left_WO = WorldObject(this_id)
+        guard_left_WO.verts = [
+                        (0.45,-1,0),
+                        (0.45,1,0),
+                        (0,1,0),
+                        (0,-1,0)]
+        
+        guard_left.setHpr(0,0,30)
+        guard_left_WO.pos = pos
+        self.frame_objects[this_id] = guard_left
+        self.world_objects[this_id] = guard_left_WO
+        
         #bumper1
-        bumper1_pos = (-0.2, 0, 0)
-        frame_size = (-0.05, 0.05, -0.05, 0.05)
-        F = DirectFrame(pos=bumper1_pos, frameSize=frame_size)
+        #bumper1_pos = (-0.2, 0, 0)
+        #frame_size = (-0.05, 0.05, -0.05, 0.05)
+        #F = DirectFrame(pos=bumper1_pos, frameSize=frame_size)
         
         #bumper2
-        bumper2_pos = (0.12, 0, 0.2)
-        frame_size = (-0.05, 0.05, -0.05, 0.05)
-        F = DirectFrame(pos=bumper2_pos, frameSize=frame_size)
+        #bumper2_pos = (0.12, 0, 0.2)
+        #frame_size = (-0.05, 0.05, -0.05, 0.05)
+        #F = DirectFrame(pos=bumper2_pos, frameSize=frame_size)
         
         # ok this is the first dict.
         self.env_phys_init_dict={}
-                            
+        
         self.env_phys_init_dict.update({"create complex":{
-                            "4":[top_wo,"NPC",],
-                            "5":[left_wo,"NPC"],
-                            "6":[right_wo,"NPC"],
+                            top_wo.id:[top_wo,"NPC",],
+                            left_wo.id:[left_wo,"NPC"],
+                            right_wo.id:[right_wo,"NPC"],
+                            guard_right_WO.id:[guard_right_WO,"NPC"],
+                            guard_left_WO.id:[guard_left_WO,"NPC"],
                             },})
         
         self.env_phys_init_dict.update({"update":{
-                            "2":(bumper1_pos,None),
-                            "3":(bumper2_pos,None),
-                            },})
+                    guard_right_WO.id:[guard_right_WO.pos,(0,0,-30)],
+                    guard_left_WO.id:[guard_left_WO.pos,(0,0,30)],
+                    }})
+        
+        #self.env_phys_init_dict.update({"update":{
+        #                    "2":(bumper1_pos,None),
+        #                    "3":(bumper2_pos,None),
+        #                    },})
 
 
     def main(self,inputs,collisions):
@@ -199,8 +255,8 @@ class Flipper:
             self.right_deg -= bar_speed
             self.right_bar.setHpr(0, 0, self.right_deg)
         
-        phys_update_dict["update"]["7"]=(self.left_bar_WO.pos,(0, 0, -self.left_deg))
-        phys_update_dict["update"]["8"]=(self.right_bar_WO.pos,(0, 0, self.right_deg))
+        phys_update_dict["update"][self.bar_ids[0]]=(self.world_objects[self.bar_ids[0]].pos,(0, 0, -self.left_deg))
+        phys_update_dict["update"][self.bar_ids[1]]=(self.world_objects[self.bar_ids[1]].pos,(0, 0, self.right_deg))
         
         if "1" in collisions:
             for x in collisions["1"]:
@@ -231,15 +287,10 @@ class Flipper:
                 # of the reflection... uh.
                 bar_speed_increase = 0
                 #add the appropriate angular velocity of the bar
-                if x == "7" and "left bar" in inputs:
+                if x in self.bar_ids and ("left bar" in inputs or "right bar" in inputs):
                     d = self.current_ball.position - self.right_bar_WO.pos
                     bar_speed_increase = d.magnitude()/0.4 * math.sin(bar_speed/360)
-                    
-                if x == "8" and "right bar" in inputs:
-                    d = self.current_ball.position - self.right_bar_WO.pos
-                    
-                    bar_speed_increase = d.magnitude()/0.4 * math.sin(bar_speed/360)
-                    
+                                        
                 reflected_movement = reflection(self.current_ball.speed_vector,col_v)
                 m = reflected_movement.magnitude()
                 
@@ -248,7 +299,7 @@ class Flipper:
                 print("frac",frac)
                 
                 self.current_ball.speed_vector = reflected_movement+col_v*bar_speed_increase
-                
+                self.current_ball.speed_vector *= 0.9
                 # it is... very unlikely that I will bounce with the exact
                 # same thing? hmmm.. but possible.
                 # but not without changing vectors?
@@ -367,8 +418,8 @@ class Wrapper:
         # ball.
         
         
-        self.collisions.create_collision_node("2","NPC",radius=0.15)
-        self.collisions.create_collision_node("3","NPC",radius=0.15)
+        #self.collisions.create_collision_node("2","NPC",radius=0.15)
+        #self.collisions.create_collision_node("3","NPC",radius=0.15)
         
         print("YO")
         print(self.flipper.env_phys_init_dict)
