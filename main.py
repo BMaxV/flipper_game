@@ -1,5 +1,6 @@
 from panda_collisions import panda_collisions  # CollisionWrapper
 
+from direct.gui.DirectGui import OnscreenText
 from direct.showbase import DirectObject # event handler
 from direct.gui.DirectGui import DirectFrame # 2d UI
 from direct.showbase import ShowBase # window
@@ -41,7 +42,18 @@ class Flipper:
         self.world_objects = {}
         self.frame_objects = {}
         
+        self.bar_speed = 5
+        self.switch_states = {}
+        
+        self.held_inputs = []
+        
         self.score = 0
+        
+        self.multiplier = 1
+        self.base_multiplier = 1
+        
+        self.temp_modifiers = {}
+        
         self.balls_remaining = 3
         self.current_ball = None
         self.output_for_physics = {}
@@ -69,6 +81,37 @@ class Flipper:
                             self.left_bar_WO.id:[self.left_bar_WO,"wall"],
                             self.right_bar_WO.id:[self.right_bar_WO,"wall"],
                             })
+        self.build_text()
+        
+    def build_text(self):
+        scale = 0.05
+        pos=(-0.95,0.95,0)
+        text="Score:1000"
+        self.score_text=OnscreenText(text=text, 
+                    scale=scale,
+                    pos=pos,
+                    fg=(1,1,1, 1),
+                    shadow=(0,0,0,1),
+                    align=0)
+        
+        pos=(-0.95,0.9,0)
+        text="multiplier:1x"
+        self.score_text=OnscreenText(text=text, 
+                    scale=scale,
+                    pos=pos,
+                    fg=(1,1,1, 1),
+                    shadow=(0,0,0,1),
+                    align=0)
+        
+        pos = (-0.95,0.85,0)
+        text = "balls:3"
+        self.score_text=OnscreenText(text=text, 
+                    scale=scale,
+                    pos=pos,
+                    fg=(1,1,1, 1),
+                    shadow=(0,0,0,1),
+                    align=0)
+        
     def make_left_bar(self):
         this_id=self.generate_object_id()
         
@@ -103,7 +146,33 @@ class Flipper:
         self.right_bar_WO.pos = pos
         self.world_objects[this_id]=self.right_bar_WO
         self.frame_objects[this_id]=self.right_bar
+    
+    def add_three_bumper_switches(self,pos,vector,name):
         
+        creation_dict = {}
+        upd = {}
+        self.switch_to_wo_ids = {}
+        self.switch_states[name] = {}
+        c=0
+        while c < 3:
+            fpos = pos + c/3*vector
+            print(pos)
+            fpos=tuple(fpos)
+            frame_size=(-0.05,0.05,-0.05,0.05)
+            this_id = self.generate_object_id()
+            frame = DirectFrame(pos=fpos, frameSize=frame_size)
+            #guard_left_WO = WorldObject(this_id)
+            self.frame_objects[this_id] = frame
+            frame.setColor(1,0,0)
+            self.switch_to_wo_ids[this_id] = (name,c)
+            self.switch_states[name][c] = False
+            creation_dict[this_id] = "NPC"
+            upd.update({this_id:(fpos,(0,0,0)),})
+            c += 1
+            
+        return creation_dict,upd
+        
+    
     def generate_object_id(self):
         self.object_id_counter += 1
         return str(self.object_id_counter)
@@ -210,17 +279,109 @@ class Flipper:
                             guard_right_WO.id:[guard_right_WO,"NPC"],
                             guard_left_WO.id:[guard_left_WO,"NPC"],
                             },})
+        p = vector.Vector(-0.6,0,0.4)
+        v = vector.Vector(1.2,0,0.2)
+        my_d,upd=self.add_three_bumper_switches(p,v,"test")
+        
+        self.env_phys_init_dict.update({"create":my_d})
         
         self.env_phys_init_dict.update({"update":{
                     guard_right_WO.id:[guard_right_WO.pos,(0,0,-30)],
                     guard_left_WO.id:[guard_left_WO.pos,(0,0,30)],
                     }})
         
+        self.env_phys_init_dict["update"].update(upd)
+        
         #self.env_phys_init_dict.update({"update":{
         #                    "2":(bumper1_pos,None),
         #                    "3":(bumper2_pos,None),
         #                    },})
 
+    def bar_activation(self,inputs):
+        bar_speed = self.bar_speed
+        if "left bar" in inputs and self.left_deg < 30:
+            self.left_deg += bar_speed
+            self.left_bar.setHpr(0, 0, -self.left_deg)
+            
+        elif self.left_deg > -30 and "left bar" not in inputs:
+            self.left_deg -= bar_speed
+            self.left_bar.setHpr(0, 0, -self.left_deg)
+        
+        if "right bar" in inputs and self.right_deg < 30:
+            self.right_deg += bar_speed
+            self.right_bar.setHpr(0, 0, self.right_deg)
+            
+        elif self.right_deg > -30 and "right bar" not in inputs:
+            self.right_deg -= bar_speed
+            self.right_bar.setHpr(0, 0, self.right_deg)
+        
+
+    def switch_rotation(self,inputs):
+        if "left bar" in inputs and "left bar" not in self.held_inputs:
+            var="up"
+        elif "right bar" in inputs and "right bar" not in self.held_inputs:
+            var="down"
+        else:
+            return
+        
+        for name in self.switch_states:
+            d = self.switch_states[name]
+            numbers = d.keys()
+            if var=="down":
+                new_d = {0:d[2],
+                        1:d[0],
+                        2:d[1]}
+            else:
+                new_d = {0:d[1],
+                        1:d[2],
+                        2:d[0]}
+            self.switch_states[name] = new_d
+        self.recolor_switches()
+        
+    def recolor_switches(self):
+        for x in self.frame_objects:
+            if x in self.switch_to_wo_ids:
+                name,c=self.switch_to_wo_ids[x]
+                if self.switch_states[name][c]:
+                    self.frame_objects[x].setColor(0,1,0)
+                else:
+                    self.frame_objects[x].setColor(1,0,0)
+    
+    
+    def check_switch(self,x):
+        """
+        check if the collided object is a switch
+        """
+        if x in self.switch_to_wo_ids:
+            self.score += 100*self.multiplier
+            self.score_text.setText(f"Score:{self.score}")
+            
+            name,c = self.switch_to_wo_ids[x]
+            self.switch_states[name][c]=not self.switch_states[name][c]
+            if self.switch_states[name][c]:
+                self.frame_objects[x].setColor(0,1,0)
+            else:
+                self.frame_objects[x].setColor(1,0,0)
+            
+            # check if the whole group is turned on!
+            self.check_switch_group(name)
+    def check_switch_group(self,name):
+        
+        all_p = True
+        for x in self.switch_states[name]:
+            if self.switch_states[name][x]==False:
+                all_p=False
+                return
+        
+        if all_p:
+            self.multiplier += 1
+            self.score += 100 * self.multiplier
+            print(name," group activated")
+        
+        for x in self.switch_states[name]:
+            self.switch_states[name][x]=False
+        
+        self.recolor_switches()
 
     def main(self,inputs,collisions):
         phys_update_dict = {"update":{}}
@@ -238,33 +399,25 @@ class Flipper:
                 self.current_ball.F.removeNode()
                 self.current_ball = None
                 
-        bar_speed = 5
-        if "left bar" in inputs and self.left_deg < 30:
-            self.left_deg += bar_speed
-            self.left_bar.setHpr(0, 0, -self.left_deg)
-            
-        elif self.left_deg > -30 and "left bar" not in inputs:
-            self.left_deg -= bar_speed
-            self.left_bar.setHpr(0, 0, -self.left_deg)
+        self.switch_rotation(inputs)
         
-        if "right bar" in inputs and self.right_deg < 30:
-            self.right_deg += bar_speed
-            self.right_bar.setHpr(0, 0, self.right_deg)
-            
-        elif self.right_deg > -30 and "right bar" not in inputs:
-            self.right_deg -= bar_speed
-            self.right_bar.setHpr(0, 0, self.right_deg)
+        self.bar_activation(inputs)
         
+        # update bar rotation
         phys_update_dict["update"][self.bar_ids[0]]=(self.world_objects[self.bar_ids[0]].pos,(0, 0, -self.left_deg))
         phys_update_dict["update"][self.bar_ids[1]]=(self.world_objects[self.bar_ids[1]].pos,(0, 0, self.right_deg))
         
+        
         if "1" in collisions:
+            #ollisions=collisions["1"]
             for x in collisions["1"]:
                 if x in self.past_collisions:
                     continue
-                print("col",collisions["1"][x])
+                
                 # this is probably causing problems, because 
                 # I switched y and z.
+                self.check_switch(x)
+            
                 
                 col_v = collisions["1"][x]["collision normal"]
                 col_v = vector.Vector(*col_v)
@@ -285,6 +438,7 @@ class Flipper:
                 # this adds the angular velocity of the flipper
                 # bar to the reflected movement, along the normal
                 # of the reflection... uh.
+                bar_speed = self.bar_speed
                 bar_speed_increase = 0
                 #add the appropriate angular velocity of the bar
                 if x in self.bar_ids and ("left bar" in inputs or "right bar" in inputs):
@@ -308,7 +462,9 @@ class Flipper:
                 # add it to past bounces, so I don't bounce back and
                 # forth in the same spot.
                 self.past_collisions.append(x)
-            
+        
+        else:
+            collisions = {}
         rml=[]
         for x in self.past_collisions:
             if collisions!={}:
@@ -329,6 +485,19 @@ class Flipper:
             # do something, also create a new physics ball.
             self.make_new_ball()
             phys_update_dict["create"] = {1:"NPC"}
+        
+        rml=[]
+        for x in self.held_inputs:
+            if x not in inputs:
+                rml.append(x)
+        for x in rml:
+            self.held_inputs.remove(x)
+        
+        for x in inputs:
+            if x not in self.held_inputs:
+                self.held_inputs.append(x)
+        
+        
         
         return phys_update_dict
 
