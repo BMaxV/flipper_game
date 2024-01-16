@@ -16,6 +16,10 @@ They should be trivial to install and not conflict with anything.
 
 The setup is a bit annoying if you're doing it yourself and you want to make a new table. The normals of the "line" boundaries have to be adjusted manually to make the normals point into the right direction.
 
-
-
 ![gaming](screenshot.png)
+
+# webbuild
+
+Webbuild uses the pygame webkit and itch io, docs are over here:
+
+https://pygame-web.github.io/wiki/pkg/panda3d/
