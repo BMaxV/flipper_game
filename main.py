@@ -1,3 +1,22 @@
+
+#!python
+
+# /// pyproject
+# [project]
+# name = "flippergaaaaame"
+# version = "2024"
+# description = "embed flippergame in Panda3D webgl surface"
+# readme = {file = "README.txt", content-type = "text/markdown"}
+# requires-python = ">=3.11"
+#
+# dependencies = [
+#  "panda3d",
+#  "vector",
+#  "panda_collisions",
+# ]
+# ///
+
+import pygbag.aio as asyncio
 from panda_collisions import panda_collisions  # CollisionWrapper
 
 from direct.gui.DirectGui import OnscreenText
@@ -619,7 +638,7 @@ class Wrapper:
             self.inputs.append(stuff)
 
 
-def main():
+async def main():
     W = Wrapper()
     
     while True:
@@ -633,7 +652,7 @@ def main():
         
         W.collisions.update(update_data) # update collision state from game state
         W.b.taskMgr.step() # this renders and does the hardware/inputs
+        await asyncio.sleep(0)
 
 if __name__ == "__main__":
-    main()
-    #test_reflection()
+    asyncio.run( main() )
