@@ -640,7 +640,7 @@ class Wrapper:
 
 async def main():
     W = Wrapper()
-    
+    print("init sucessful")
     while True:
         collision_data = W.collisions.collision_checks() # collisions
         update_data = W.flipper.main(W.inputs,collision_data)  # game logic
@@ -655,4 +655,5 @@ async def main():
         await asyncio.sleep(0)
 
 if __name__ == "__main__":
+    print("this")
     asyncio.run( main() )

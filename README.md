@@ -8,8 +8,8 @@ It depends on 2 of my own packages unfortunately.
 
 Get them over here:
 
-https://github.com/BMaxV/vector
-https://github.com/BMaxV/panda3d_collisions
+ * https://github.com/BMaxV/vector
+ * https://github.com/BMaxV/panda3d_collisions
 
 They should be trivial to install and not conflict with anything.
 
