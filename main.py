@@ -148,7 +148,16 @@ class Flipper:
         self.frame_objects[this_id]=self.right_bar
     
     def add_three_bumper_switches(self,pos,vector,name):
+        """
+        todo: this still creates the default sized bumper.
+        but I want it a lot smaller. ok that's done.
         
+        now, for my next trick, I want to do a rogue like thing
+        where I select the tables and then inside the tables
+        I want to gather power ups.
+        
+        but not just points, I want active abilities for my balls.
+        """
         creation_dict = {}
         upd = {}
         self.switch_to_wo_ids = {}
@@ -156,9 +165,9 @@ class Flipper:
         c=0
         while c < 3:
             fpos = pos + c/3*vector
-            print(pos)
-            fpos=tuple(fpos)
-            frame_size=(-0.05,0.05,-0.05,0.05)
+            print(fpos)
+            fpos = tuple(fpos)
+            frame_size = (-0.05,0.05,-0.05,0.05)
             this_id = self.generate_object_id()
             frame = DirectFrame(pos=fpos, frameSize=frame_size)
             #guard_left_WO = WorldObject(this_id)
@@ -167,7 +176,7 @@ class Flipper:
             self.switch_to_wo_ids[this_id] = (name,c)
             self.switch_states[name][c] = False
             creation_dict[this_id] = "NPC"
-            upd.update({this_id:(fpos,(0,0,0)),})
+            upd.update({this_id:(fpos,(0,0,0))})
             c += 1
             
         return creation_dict,upd
@@ -281,9 +290,11 @@ class Flipper:
                             },})
         p = vector.Vector(-0.6,0,0.4)
         v = vector.Vector(1.2,0,0.2)
-        my_d,upd=self.add_three_bumper_switches(p,v,"test")
+        my_d,upd = self.add_three_bumper_switches(p,v,"test")
         
-        self.env_phys_init_dict.update({"create":my_d})
+        #self.env_phys_init_dict.update({"create":my_d})
+        self.bumper_creation = my_d
+        self.bumper_positions = upd
         
         self.env_phys_init_dict.update({"update":{
                     guard_right_WO.id:[guard_right_WO.pos,(0,0,-30)],
@@ -370,12 +381,14 @@ class Flipper:
         all_p = True
         for x in self.switch_states[name]:
             if self.switch_states[name][x]==False:
-                all_p=False
+                all_p = False
                 return
         
         if all_p:
             self.multiplier += 1
             self.score += 100 * self.multiplier
+            # optionally append this to some multiplier list that
+            # ticks down.
             print(name," group activated")
         
         for x in self.switch_states[name]:
@@ -424,11 +437,11 @@ class Flipper:
                 
                 v_v = vector.Vector(*self.current_ball.speed_vector)
                 v_v = v_v.normalize()
-                print(col_v,v_v)
+                
                 ang2 = v_v.angle_to_other(col_v)
-                print("ang",ang2)
+                
                 if ang2 < math.pi/2:
-                    print("not calculating")
+                    
                     continue
                 
                 # that's not how reflections work.
@@ -449,16 +462,10 @@ class Flipper:
                 m = reflected_movement.magnitude()
                 
                 frac = (bar_speed_increase/m)
-                print(bar_speed_increase)
-                print("frac",frac)
-                
+                                
                 self.current_ball.speed_vector = reflected_movement+col_v*bar_speed_increase
                 self.current_ball.speed_vector *= 0.9
-                # it is... very unlikely that I will bounce with the exact
-                # same thing? hmmm.. but possible.
-                # but not without changing vectors?
-                # hmmmm
-                
+                               
                 # add it to past bounces, so I don't bounce back and
                 # forth in the same spot.
                 self.past_collisions.append(x)
@@ -475,7 +482,7 @@ class Flipper:
                 
         for x in rml:
             self.past_collisions.remove(x)
-            print("removed",x)
+            
          # update the status.
          
         if self.current_ball != None:            
@@ -590,11 +597,19 @@ class Wrapper:
         #self.collisions.create_collision_node("2","NPC",radius=0.15)
         #self.collisions.create_collision_node("3","NPC",radius=0.15)
         
-        print("YO")
-        print(self.flipper.env_phys_init_dict)
         self.collisions.update(self.flipper.env_phys_init_dict)
         
-        print(self.collisions.collision_objects)
+        # these are some unfortunate hoops for non standard sized collision
+        # things.
+        for x in self.flipper.bumper_creation:
+            tag = self.flipper.bumper_creation[x]
+            self.collisions.create_collision_node(x,tag,0.05)
+            
+        self.collisions.update({"update":self.flipper.bumper_positions})
+        
+        for x in self.flipper.bumper_positions:
+            ps = self.collisions.collision_objects[x].getPos()
+            
         
         self.buttons_move_actions = {"y":"left bar","m":"right bar","l":"new ball"}
         self.create_move_task()
